@@ -1,0 +1,248 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                  String    @id @default(cuid())
+  email               String    @unique
+  passwordHash        String
+  name                String
+  role                String    // CITIZEN, REVIEWER, OFFICER, SUPERVISOR, ADMIN
+  department          String?   // waste, roads, water, others
+  failedLoginAttempts Int       @default(0)
+  lockoutUntil        DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+}
+
+model Issue {
+  id                    String    @id @default(cuid())
+  publicRef             String    @unique // Tracking ID NS-YYYY-XXXXXX
+  title                 String
+  description           String
+  department            String    // waste, roads, water, others
+  categoryId            String?
+  subcategoryId         String?
+  category              String
+  status                String    @default("SUBMITTED") // SUBMITTED, UNDER_REVIEW, ACCEPTED, IN_PROGRESS, RESOLVED, RESOLVED_AWAITING_VERIFICATION, CLOSED, REOPENED, REJECTED
+  priority              String    @default("Normal") // Normal, High, Critical
+  areaName              String?
+  latitude              Float
+  longitude             Float
+  address               String?
+  distinctCitizenCount  Int       @default(1)
+  reportCount           Int       @default(1)
+  supportCount          Int       @default(1)
+  assignedToId          String?
+  assignedToName        String?
+  reopenCount           Int       @default(0)
+  escalationLevel       Int       @default(0)
+  isOverdue             Boolean   @default(false)
+  isApproachingDeadline Boolean   @default(false)
+  emergencyStatus       String    @default("NONE") // NONE, POSSIBLE_UNVERIFIED, VERIFIED
+  isPossibleEmergency   Boolean   @default(false)
+  isCriticalVerified    Boolean   @default(false)
+  resolutionNote        String?
+  rejectionReason       String?
+  responseDeadline      DateTime
+  resolutionDue         DateTime
+  submittedAt           DateTime  @default(now())
+  resolvedAt            DateTime?
+  closedAt              DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  reports               Report[]
+  supports              IssueSupport[]
+  evidence              Evidence[]
+  reopenRequests        ReopenRequest[]
+  emergencyFlags        EmergencyFlag[]
+  satisfactionRatings   SatisfactionRating[]
+  escalationEvents      EscalationEvent[]
+
+  @@index([status, isOverdue])
+  @@index([categoryId, subcategoryId])
+  @@index([latitude, longitude])
+}
+
+model Report {
+  id                  String    @id @default(cuid())
+  referenceId         String    @unique
+  issueId             String
+  citizenId           String
+  title               String
+  description         String
+  latitude            Float
+  longitude           Float
+  address             String?
+  locationSource      String    @default("MANUAL") // EXIF, DEVICE, MAP, MANUAL
+  locationConfirmedAt DateTime?
+  isPossibleEmergency Boolean   @default(false)
+  emergencyConcern    String?
+  submittedAt         DateTime  @default(now())
+  createdAt           DateTime  @default(now())
+
+  issue               Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, citizenId])
+}
+
+model Evidence {
+  id           String   @id @default(cuid())
+  reportId     String?
+  issueId      String?
+  filePath     String
+  mimeType     String
+  kind         String   @default("INITIAL") // INITIAL, RESOLUTION
+  uploadedById String
+  createdAt    DateTime @default(now())
+
+  issue        Issue?   @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model ReopenRequest {
+  id             String    @id @default(cuid())
+  issueId        String
+  citizenId      String
+  reason         String
+  status         String    @default("PENDING") // PENDING, APPROVED, REJECTED
+  decidedById    String?
+  decisionReason String?
+  createdAt      DateTime  @default(now())
+  decidedAt      DateTime?
+
+  issue          Issue     @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model PossibleDuplicate {
+  id             String    @id @default(cuid())
+  issueAId       String
+  issueBId       String
+  similarity     Float
+  distanceMeters Float
+  status         String    @default("PENDING") // PENDING, LINKED, KEPT_SEPARATE
+  resolvedById   String?
+  resolvedAt     DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([issueAId, issueBId])
+}
+
+model IssueSupport {
+  id        String   @id @default(cuid())
+  issueId   String
+  citizenId String
+  createdAt DateTime @default(now())
+
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, citizenId])
+}
+
+model EmergencyFlag {
+  id           String   @id @default(cuid())
+  issueId      String
+  reportId     String?
+  flaggedById  String
+  concern      String
+  status       String   @default("PENDING") // PENDING, VERIFIED, DISMISSED
+  verifiedById String?
+  reason       String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  issue        Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+}
+
+model SatisfactionRating {
+  id        String   @id @default(cuid())
+  issueId   String
+  citizenId String
+  rating    Int
+  comment   String?
+  createdAt DateTime @default(now())
+
+  issue     Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, citizenId])
+}
+
+model EscalationEvent {
+  id          String   @id @default(cuid())
+  issueId     String
+  kind        String   // RESPONSE, RESOLUTION
+  level       Int
+  triggeredAt DateTime @default(now())
+
+  issue       Issue    @relation(fields: [issueId], references: [id], onDelete: Cascade)
+
+  @@unique([issueId, kind, level])
+}
+
+model WorkflowTransition {
+  id               String  @id @default(cuid())
+  fromStatus       String
+  toStatus         String
+  action           String
+  allowedRoles     String
+  requiresReporter Boolean @default(false)
+  departmentScoped Boolean @default(false)
+}
+
+model AuditEvent {
+  id            String   @id @default(cuid())
+  entityType    String   @default("Issue")
+  entityId      String
+  actorId       String
+  actorRole     String
+  action        String
+  outcome       String   // accepted, refused, system
+  fromStatus    String?
+  toStatus      String?
+  reason        String?
+  refusalReason String?
+  metadata      String?
+  prevHash      String?
+  hash          String?
+  timestamp     DateTime @default(now())
+
+  @@index([entityType, entityId, timestamp])
+}
+
+model Notification {
+  id          String    @id @default(cuid())
+  userId      String?
+  targetRoles String?
+  issueId     String?
+  message     String
+  messageKey  String?
+  params      String?
+  readAt      DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([userId, readAt])
+}
+
+model DeadlineChange {
+  id              String    @id @default(cuid())
+  issueId         String
+  oldResponseDue  DateTime?
+  newResponseDue  DateTime?
+  oldResolutionDue DateTime?
+  newResolutionDue DateTime?
+  reason          String
+  actorId         String
+  createdAt       DateTime  @default(now())
+}
+
+model SystemWorkerHeartbeat {
+  id        Int      @id @default(1)
+  lastRanAt DateTime @default(now())
+  status    String   @default("healthy")
+  details   String?
+}

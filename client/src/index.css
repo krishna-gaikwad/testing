@@ -1,0 +1,56 @@
+@import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
+
+@theme {
+  --color-gov-navy: #0c2340;
+  --color-gov-navy-dark: #07172b;
+  --color-gov-navy-light: #16365c;
+  --color-gov-red: #c5221f;
+  --color-gov-red-hover: #b01a17;
+  --color-gov-saffron: #e05626;
+  --color-gov-green: #138808;
+  --color-gov-blue: #1a4f8b;
+  --color-gov-surface: #f4f6f9;
+  --color-gov-border: #dbe2ea;
+}
+
+body {
+  margin: 0;
+  font-family: 'Noto Sans Devanagari', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: #f4f6f9;
+  color: #1e293b;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Accessibility font size scaling */
+html[data-font-size="small"] {
+  font-size: 14.5px;
+}
+html[data-font-size="normal"] {
+  font-size: 16px;
+}
+html[data-font-size="large"] {
+  font-size: 17.5px;
+}
+
+/* High contrast accessibility */
+html[data-contrast="high"] body {
+  background-color: #f0f2f5;
+  filter: contrast(112%);
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Leaflet map container layout & stacking isolation */
+.leaflet-container {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100%;
+  position: relative;
+  z-index: 0;
+  isolation: isolate;
+}

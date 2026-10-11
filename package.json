@@ -1,0 +1,19 @@
+{
+  "name": "nagar-setu",
+  "version": "1.0.0",
+  "description": "Nagar Setu - Municipal Grievance Redressal Platform (Pune Municipal Corporation)",
+  "main": "server/src/index.js",
+  "scripts": {
+    "build": "npm --prefix client install && npm --prefix client run build && npm --prefix server install",
+    "start": "node server/src/index.js",
+    "server": "npm --prefix server start",
+    "client": "npm --prefix client run dev",
+    "seed": "npm --prefix server run seed",
+    "test": "npm --prefix server run test:qa"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "author": "",
+  "license": "ISC"
+}
